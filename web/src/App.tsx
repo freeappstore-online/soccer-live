@@ -1,28 +1,24 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { Shell } from "./components/Shell";
 import { MatchCard } from "./components/MatchCard";
 import type { League, Match } from "./types/soccer";
 import { useMatches, useCurrentMatchday } from "./hooks/useSoccer";
 
 const LEAGUES: League[] = [
-  { id: "bl1",     name: "Bundesliga",         shortName: "BL1",  flag: "🇩🇪", country: "Germany" },
-  { id: "bl2",     name: "2. Bundesliga",       shortName: "BL2",  flag: "🇩🇪", country: "Germany" },
-  { id: "ucl",     name: "Champions League",    shortName: "UCL",  flag: "🇪🇺", country: "Europe" },
-  { id: "uel",     name: "Europa League",       shortName: "UEL",  flag: "🇪🇺", country: "Europe" },
-  { id: "gb1",     name: "Premier League",      shortName: "PL",   flag: "🏴󠁧󠁢󠁥󠁮󠁧󠁿", country: "England" },
-  { id: "es1",     name: "La Liga",             shortName: "LL",   flag: "🇪🇸", country: "Spain" },
-  { id: "it1",     name: "Serie A",             shortName: "SA",   flag: "🇮🇹", country: "Italy" },
-  { id: "fr1",     name: "Ligue 1",             shortName: "L1",   flag: "🇫🇷", country: "France" },
-  { id: "nl1",     name: "Eredivisie",          shortName: "ERE",  flag: "🇳🇱", country: "Netherlands" },
-  { id: "pt1",     name: "Primeira Liga",       shortName: "PL",   flag: "🇵🇹", country: "Portugal" },
+  { id: "bl1", name: "Bundesliga",        shortName: "Bundesliga",        flag: "🇩🇪", country: "Germany" },
+  { id: "bl2", name: "2. Bundesliga",     shortName: "2. Bundesliga",     flag: "🇩🇪", country: "Germany" },
+  { id: "bl3", name: "3. Liga",           shortName: "3. Liga",           flag: "🇩🇪", country: "Germany" },
+  { id: "dfb", name: "DFB-Pokal",         shortName: "DFB-Pokal",         flag: "🏆", country: "Germany" },
+  { id: "ucl", name: "Champions League",  shortName: "Champions League",  flag: "🌟", country: "Europe" },
+  { id: "uel", name: "Europa League",     shortName: "Europa League",     flag: "🟠", country: "Europe" },
 ];
 
-// Detect current season
+const STORAGE_KEY = "soccer-live_league";
+
 function getCurrentSeason(): string {
   const now = new Date();
   const year = now.getFullYear();
   const month = now.getMonth() + 1;
-  // Season starts in July/August
   return month >= 7 ? String(year) : String(year - 1);
 }
 
@@ -50,12 +46,10 @@ function categorizeMatches(matches: Match[]): {
     } else if (diffMs < 0) {
       upcoming.push(m);
     } else {
-      // Probably finished but not marked
       recent.push(m);
     }
   }
 
-  // Sort
   live.sort((a, b) => new Date(a.matchDateTimeUTC).getTime() - new Date(b.matchDateTimeUTC).getTime());
   recent.sort((a, b) => new Date(b.matchDateTimeUTC).getTime() - new Date(a.matchDateTimeUTC).getTime());
   upcoming.sort((a, b) => new Date(a.matchDateTimeUTC).getTime() - new Date(b.matchDateTimeUTC).getTime());
@@ -79,41 +73,118 @@ function LoadingGrid() {
 
 function EmptyState({ tab }: { tab: Tab }) {
   const messages: Record<Tab, { icon: string; title: string; desc: string }> = {
-    live:     { icon: "🔴", title: "No live matches right now", desc: "Check back during match times." },
-    recent:   { icon: "📋", title: "No recent results", desc: "Completed matches will appear here." },
-    upcoming: { icon: "📅", title: "No upcoming fixtures", desc: "Future scheduled games will show here." },
+    live:     { icon: "🔴", title: "No live matches right now",  desc: "Check back during match times." },
+    recent:   { icon: "📋", title: "No recent results",          desc: "Completed matches will appear here." },
+    upcoming: { icon: "📅", title: "No upcoming fixtures",       desc: "Future scheduled games will show here." },
   };
   const m = messages[tab];
   return (
     <div className="flex flex-col items-center justify-center py-24 gap-4 text-center">
       <span className="text-5xl">{m.icon}</span>
-      <h3 className="text-lg font-bold" style={{ fontFamily: "Fraunces, serif" }}>{m.title}</h3>
+      <h3 className="font-display text-lg font-bold" style={{ color: "var(--ink)" }}>{m.title}</h3>
       <p className="text-sm max-w-xs" style={{ color: "var(--muted)" }}>{m.desc}</p>
     </div>
   );
 }
 
+function LeagueDropdown({
+  leagues,
+  selected,
+  onChange,
+}: {
+  leagues: League[];
+  selected: League;
+  onChange: (l: League) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) {
+        setOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, []);
+
+  return (
+    <div ref={ref} className="relative">
+      <button
+        onClick={() => setOpen((v) => !v)}
+        className="flex items-center gap-2 px-4 py-2.5 rounded-xl border text-sm font-semibold transition-all"
+        style={{
+          background: "var(--paper)",
+          borderColor: "var(--line-strong)",
+          color: "var(--ink)",
+          minWidth: "13rem",
+        }}
+      >
+        <span>{selected.flag}</span>
+        <span className="flex-1 text-left">{selected.name}</span>
+        <span style={{ color: "var(--muted)", fontSize: "0.7rem" }}>{open ? "▲" : "▼"}</span>
+      </button>
+
+      {open && (
+        <div
+          className="absolute left-0 top-full mt-1 rounded-2xl border shadow-lg z-50 overflow-hidden"
+          style={{
+            background: "var(--paper)",
+            borderColor: "var(--line)",
+            minWidth: "13rem",
+            boxShadow: "0 8px 24px rgba(0,0,0,0.12)",
+          }}
+        >
+          {leagues.map((l) => (
+            <button
+              key={l.id}
+              onClick={() => { onChange(l); setOpen(false); }}
+              className="flex items-center gap-3 w-full px-4 py-2.5 text-sm font-medium text-left transition-all"
+              style={{
+                background: selected.id === l.id ? "var(--accent)" : "transparent",
+                color: selected.id === l.id ? "#fff" : "var(--ink)",
+              }}
+            >
+              <span>{l.flag}</span>
+              <div>
+                <div className="font-semibold">{l.name}</div>
+                <div className="text-xs opacity-70">{l.country}</div>
+              </div>
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function App() {
-  const [selectedLeague, setSelectedLeague] = useState<League>(LEAGUES[0]);
+  const savedId = localStorage.getItem(STORAGE_KEY);
+  const initialLeague = LEAGUES.find((l) => l.id === savedId) ?? LEAGUES[0];
+
+  const [selectedLeague, setSelectedLeague] = useState<League>(initialLeague);
   const [tab, setTab] = useState<Tab>("live");
   const season = getCurrentSeason();
 
-  // Fetch current matchday (live endpoint)
+  function handleLeagueChange(l: League) {
+    setSelectedLeague(l);
+    setTab("live");
+    localStorage.setItem(STORAGE_KEY, l.id);
+  }
+
   const { matchday, loading: mdLoading, error: mdError, refresh } = useCurrentMatchday(
     selectedLeague.id,
     season
   );
 
-  // Fetch full season for upcoming
   const { currentMatches: allMatches, loading: allLoading } = useMatches(
     selectedLeague.id,
     season
   );
 
-  // Combine: matchday for live/recent, all for upcoming
   const { live, recent, upcoming } = useMemo(() => {
     const combined = [...matchday];
-    // Add upcoming from full season not in matchday
     const matchdayIds = new Set(matchday.map((m) => m.matchID));
     for (const m of allMatches) {
       if (!matchdayIds.has(m.matchID)) {
@@ -126,7 +197,6 @@ export default function App() {
 
   const tabMatches: Match[] = tab === "live" ? live : tab === "recent" ? recent : upcoming;
   const loading = tab === "upcoming" ? allLoading : mdLoading;
-  const error = mdError;
 
   // Auto-switch to a tab with content
   useEffect(() => {
@@ -139,7 +209,7 @@ export default function App() {
   const navItems = LEAGUES.map((l) => ({
     label: `${l.flag} ${l.name}`,
     icon: l.flag,
-    onClick: () => { setSelectedLeague(l); setTab("live"); },
+    onClick: () => handleLeagueChange(l),
     active: selectedLeague.id === l.id,
   }));
 
@@ -151,59 +221,49 @@ export default function App() {
 
   return (
     <Shell navItems={navItems}>
-      <div className="p-4 md:p-8 max-w-6xl mx-auto">
+      <div className="p-4 md:p-8 max-w-5xl mx-auto">
+
         {/* Header */}
-        <div className="mb-6">
-          <div className="flex items-center justify-between flex-wrap gap-3">
+        <div className="mb-6 flex flex-col gap-4">
+          <div className="flex items-start justify-between gap-4 flex-wrap">
             <div>
               <h1
-                className="text-2xl md:text-3xl font-bold"
-                style={{ fontFamily: "Fraunces, serif", color: "var(--ink)" }}
+                className="font-display text-2xl md:text-3xl font-bold"
+                style={{ color: "var(--ink)" }}
               >
-                {selectedLeague.flag} {selectedLeague.name}
+                ⚽ Soccer Live
               </h1>
-              <p className="text-sm mt-0.5" style={{ color: "var(--muted)" }}>
-                {selectedLeague.country} · Season {season}/{Number(season) + 1}
+              <p className="text-sm mt-1" style={{ color: "var(--muted)" }}>
+                Real-time scores · Season {season}/{Number(season) + 1}
               </p>
             </div>
             <button
               onClick={refresh}
-              className="flex items-center gap-2 px-3 py-1.5 rounded-xl text-sm font-medium border transition-all hover:opacity-80"
+              className="flex items-center gap-2 px-3 py-1.5 rounded-xl text-sm font-medium border transition-all hover:opacity-70 shrink-0"
               style={{ borderColor: "var(--line)", color: "var(--muted)", background: "var(--panel)" }}
             >
               🔄 Refresh
             </button>
           </div>
 
-          {/* Mobile league selector */}
-          <div className="mt-4 flex gap-2 overflow-x-auto pb-1 md:hidden">
-            {LEAGUES.map((l) => (
-              <button
-                key={l.id}
-                onClick={() => { setSelectedLeague(l); setTab("live"); }}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap shrink-0 border transition-all"
-                style={{
-                  background: selectedLeague.id === l.id ? "var(--accent)" : "var(--panel)",
-                  color: selectedLeague.id === l.id ? "#fff" : "var(--ink)",
-                  borderColor: selectedLeague.id === l.id ? "var(--accent)" : "var(--line)",
-                }}
-              >
-                {l.flag} {l.shortName}
-              </button>
-            ))}
-          </div>
+          {/* League dropdown */}
+          <LeagueDropdown
+            leagues={LEAGUES}
+            selected={selectedLeague}
+            onChange={handleLeagueChange}
+          />
         </div>
 
         {/* Tab bar */}
         <div
           className="flex gap-1 p-1 rounded-2xl mb-6"
-          style={{ background: "var(--panel)", width: "fit-content" }}
+          style={{ background: "var(--panel)" }}
         >
           {tabConfig.map((t) => (
             <button
               key={t.id}
               onClick={() => setTab(t.id)}
-              className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-all"
+              className="flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-xl text-sm font-semibold transition-all"
               style={{
                 background: tab === t.id ? "var(--accent)" : "transparent",
                 color: tab === t.id ? "#fff" : "var(--muted)",
@@ -226,27 +286,27 @@ export default function App() {
           ))}
         </div>
 
-        {/* Live pulse indicator */}
+        {/* Live pulse */}
         {tab === "live" && live.length > 0 && (
           <div className="flex items-center gap-2 mb-4">
             <span className="inline-block w-2 h-2 rounded-full bg-red-500 animate-pulse" />
-            <span className="text-sm font-medium" style={{ color: "var(--muted)" }}>
-              Scores update automatically every 60 seconds
+            <span className="text-sm" style={{ color: "var(--muted)" }}>
+              Auto-refreshes every 60 seconds
             </span>
           </div>
         )}
 
         {/* Error */}
-        {error && (
+        {mdError && (
           <div
             className="rounded-2xl p-4 mb-4 text-sm"
             style={{ background: "#fee2e2", color: "#dc2626" }}
           >
-            ⚠️ Could not load data: {error}. The API might be temporarily unavailable.
+            ⚠️ Could not load data: {mdError}. The API may be temporarily unavailable.
           </div>
         )}
 
-        {/* Content */}
+        {/* Match grid */}
         {loading ? (
           <LoadingGrid />
         ) : tabMatches.length === 0 ? (
@@ -259,18 +319,18 @@ export default function App() {
           </div>
         )}
 
-        {/* Data source credit */}
+        {/* Credit */}
         <div className="mt-8 text-center text-xs" style={{ color: "var(--muted)" }}>
-          Data provided by{" "}
+          Data by{" "}
           <a
             href="https://www.openligadb.de"
             target="_blank"
             rel="noopener noreferrer"
-            className="underline hover:opacity-80"
+            className="underline hover:opacity-70"
           >
             OpenLigaDB
           </a>{" "}
-          — open-source sports data, no API key required
+          — open-source, no API key required
         </div>
       </div>
     </Shell>

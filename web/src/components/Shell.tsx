@@ -10,14 +10,13 @@ interface NavItem {
 interface ShellProps {
   children: ReactNode;
   navItems?: NavItem[];
-  activeTab?: string;
 }
 
 export function Shell({ children, navItems = [] }: ShellProps) {
   return (
     <>
       {/* Desktop */}
-      <div className="hidden md:flex h-screen">
+      <div className="hidden md:flex h-screen overflow-hidden">
         <aside
           className="flex flex-col border-r h-full shrink-0"
           style={{ width: "17rem", borderColor: "var(--line)", background: "var(--panel)" }}
@@ -30,14 +29,14 @@ export function Shell({ children, navItems = [] }: ShellProps) {
               <button
                 key={item.label}
                 onClick={item.onClick}
-                className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-left transition-all"
+                className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-left transition-all w-full"
                 style={{
                   background: item.active ? "var(--accent)" : "transparent",
                   color: item.active ? "#fff" : "var(--ink)",
                 }}
               >
-                <span className="text-base">{item.icon}</span>
-                <span>{item.label}</span>
+                <span className="text-base shrink-0">{item.icon}</span>
+                <span className="truncate">{item.label}</span>
               </button>
             ))}
           </nav>
@@ -57,7 +56,7 @@ export function Shell({ children, navItems = [] }: ShellProps) {
       </div>
 
       {/* Mobile */}
-      <div className="flex flex-col h-screen md:hidden">
+      <div className="flex flex-col h-screen overflow-hidden md:hidden">
         <header
           className="flex items-center px-4 h-14 border-b shrink-0"
           style={{ borderColor: "var(--line)", background: "var(--panel)" }}
@@ -69,18 +68,18 @@ export function Shell({ children, navItems = [] }: ShellProps) {
         <main className="flex-1 overflow-auto">{children}</main>
         {navItems.length > 0 && (
           <nav
-            className="flex items-center justify-around h-16 border-t shrink-0 overflow-x-auto"
+            className="flex items-center justify-around h-16 border-t shrink-0"
             style={{ borderColor: "var(--line)", background: "var(--dock)" }}
           >
             {navItems.slice(0, 5).map((item) => (
               <button
                 key={item.label}
                 onClick={item.onClick}
-                className="flex flex-col items-center gap-0.5 px-2 py-1 min-w-[3.5rem]"
+                className="flex flex-col items-center gap-0.5 px-2 py-1"
                 style={{ color: item.active ? "var(--accent)" : "var(--muted)" }}
               >
                 <span className="text-xl">{item.icon}</span>
-                <span className="text-[10px] font-medium leading-tight">{item.label}</span>
+                <span className="text-[10px] font-medium leading-tight">{item.label.split(" ").slice(1).join(" ")}</span>
               </button>
             ))}
           </nav>

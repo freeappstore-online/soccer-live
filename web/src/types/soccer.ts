@@ -6,8 +6,8 @@ export interface Team {
 }
 
 export interface Goal {
-  goalId: number;
-  scorer: string;
+  goalID: number;
+  goalGetterName: string;
   matchMinute: number | null;
   scoreTeam1: number;
   scoreTeam2: number;
@@ -16,12 +16,12 @@ export interface Goal {
 }
 
 export interface MatchResult {
-  resultId: number;
+  resultID: number;
   resultName: string;
   pointsTeam1: number;
   pointsTeam2: number;
-  resultOrderId: number;
-  resultTypeId: number;
+  resultOrderID: number;
+  resultTypeID: number;
   resultDescription: string;
 }
 
