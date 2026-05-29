@@ -1,0 +1,14 @@
+{
+  "name": "soccer-live",
+  "private": true,
+  "packageManager": "pnpm@10.30.3",
+  "engines": { "node": ">=22" },
+  "pnpm": { "onlyBuiltDependencies": ["esbuild"] },
+  "scripts": {
+    "dev": "pnpm --filter @soccer-live/web dev",
+    "build": "pnpm --filter @soccer-live/web build",
+    "preview": "pnpm --filter @soccer-live/web preview",
+    "typecheck": "pnpm --filter @soccer-live/web exec tsc -b",
+    "test": "pnpm --filter @soccer-live/web test"
+  }
+}
