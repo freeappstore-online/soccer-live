@@ -20,9 +20,8 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-          cache: pnpm
       - name: Install
-        run: pnpm install
+        run: pnpm install --no-frozen-lockfile
       - name: Build
         run: pnpm build
       - name: Verify build output
@@ -40,4 +39,5 @@ jobs:
             --endpoint-url "https://$R2_ACCOUNT_ID.r2.cloudflarestorage.com" \
             --delete \
             --no-progress
-          echo "Deployed apps/${GITHUB_REPOSITORY##*/} from ${GITHUB_SHA::7} to R2 (Path B)"
+          echo "Deployed apps/${GITHUB_REPOSITORY##*/} from ${GITHUB_SHA::7} to R2"
+
