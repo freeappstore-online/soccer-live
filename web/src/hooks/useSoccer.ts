@@ -42,7 +42,7 @@ export function useMatches(leagueId: string, season: string) {
   return { currentMatches, loading, error, lastUpdated, refresh: fetchMatches };
 }
 
-export function useCurrentMatchday(leagueId: string, season: string) {
+export function useCurrentMatchday(leagueId: string, _season: string) {
   const [matchday, setMatchday] = useState<Match[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
